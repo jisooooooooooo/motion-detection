@@ -1,26 +1,63 @@
-import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+import React, { useEffect, useRef, useState } from "react";
 
-function App() {
+const App = () => {
+  const [image, setImage] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  useEffect(() => {
+    const ws = new WebSocket("ws://localhost:8000/ws");
+
+    ws.onmessage = (event) => {
+      const data = event.data;
+
+      if (typeof data === "string") {
+        // 텍스트 메시지 처리
+        setMessage(data); 
+        console.log("받은 텍스트 메시지:", data);
+      } else if (data instanceof Blob) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const imageUrl = reader.result as string;
+          setImage(imageUrl);
+        };
+        reader.readAsDataURL(data); 
+      }
+    };
+
+    ws.onopen = () => {
+      console.log("웹소켓 연결됨");
+    };
+
+    ws.onerror = (error) => {
+      console.error("웹소켓 오류:", error);
+    };
+
+    ws.onclose = () => {
+      console.log("웹소켓 연결 종료됨");
+    };
+
+    return () => {
+      ws.close();
+    };
+  }, []);
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+    <div>
+      <h1>PAMO</h1>
+      {message && (
+        <p style={{ color: "green" }}>{message}</p>
+      )}
+      {image && (
+        <img
+          src={image}
+          alt="Webcam Stream"
+          style={{ width: "640px", height: "480px", objectFit: "cover" }}
+        />
+      )}
+      <canvas ref={canvasRef} />
     </div>
   );
-}
+};
 
 export default App;
