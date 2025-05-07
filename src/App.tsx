@@ -1,19 +1,24 @@
 import React, { useEffect, useRef, useState } from "react";
 
-type MotionMessage = {
-    type: "motion";
-    data: string[];
+type MotionData = {
+    id: string;
+    label: string;
 };
 
-const arraysEqual = (a: string[], b: string[]) => {
+type MotionMessage = {
+    type: "motion";
+    motions: MotionData[];
+};
+
+const arraysEqual = (a: MotionData[], b: MotionData[]) => {
     if (a.length !== b.length) return false;
-    return a.every((val, index) => val === b[index]);
+    return a.every((val, index) => val.id === b[index].id);
 };
 
 const App = () => {
     const [image, setImage] = useState<string | null>(null);
-    const [motions, setMotions] = useState<string[]>([]);
-    const motionsRef = useRef<string[]>([]);
+    const [motions, setMotions] = useState<MotionData[]>([]);
+    const motionsRef = useRef<MotionData[]>([]); 
 
     useEffect(() => {
         const ws = new WebSocket("ws://localhost:8000/ws");
@@ -33,10 +38,11 @@ const App = () => {
         ws.onmessage = async (event) => {
             if (typeof event.data === "string") {
                 const message: MotionMessage = JSON.parse(event.data);
-                if (message.type === "motion" && message.data.length > 0) {
-                    if (!arraysEqual(message.data, motionsRef.current)) {
-                        setMotions(message.data);
-                        motionsRef.current = message.data;
+                if (message.type === "motion" && message.motions.length > 0) {
+                    if (!arraysEqual(message.motions, motionsRef.current)) {
+                        setMotions(message.motions);
+                        motionsRef.current = message.motions;
+                        console.log("📡 새 모션 수신:", message.motions);
                     }
                 }
             } else {
@@ -47,7 +53,7 @@ const App = () => {
         };
 
         return () => ws.close();
-    }, []); 
+    }, []);
 
     return (
         <div style={{ padding: 20 }}>
@@ -87,7 +93,7 @@ const App = () => {
                                 borderRadius: 5,
                             }}
                         >
-                            {motion}
+                            ⚡ {motion.label}
                         </div>
                     ))
                 ) : (
